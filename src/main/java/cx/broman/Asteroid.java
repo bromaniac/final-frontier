@@ -1,17 +1,22 @@
 package cx.broman;
 
+import javafx.geometry.Rectangle2D;
 import javafx.scene.image.Image;
 
 public class Asteroid {
     private final Image image;
+    private final int dy;
     private int x;
     private int y;
-    private final int dy;
 
     public Asteroid(Image image) {
         this.image = image;
         this.dy = 1 + (int) (Math.random() * 3);
         resetPosition();
+    }
+
+    public Rectangle2D getBounds() {
+        return new Rectangle2D(x, y, image.getWidth(), image.getHeight());
     }
 
     public void resetPosition() {
@@ -42,4 +47,5 @@ public class Asteroid {
     public int getY() {
         return y;
     }
+
 } 
