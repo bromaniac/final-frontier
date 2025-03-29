@@ -3,7 +3,7 @@ package cx.broman;
 import javafx.scene.image.Image;
 
 public class Ship {
-    private Image image;
+    private final Image image;
     private int x;
     private final int y;
     private boolean isShooting;

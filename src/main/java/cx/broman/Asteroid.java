@@ -3,10 +3,10 @@ package cx.broman;
 import javafx.scene.image.Image;
 
 public class Asteroid {
-    private Image image;
+    private final Image image;
     private int x;
     private int y;
-    private int dy;
+    private final int dy;
 
     public Asteroid(Image image) {
         this.image = image;
