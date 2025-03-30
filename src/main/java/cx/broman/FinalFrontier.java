@@ -137,7 +137,8 @@ public class FinalFrontier extends Application {
         gc.clearRect(0, 0, canvas.getWidth(), canvas.getHeight());
 
         // Draw scrolling background
-        for (int y = groundY; y < yMax; y += 200) {
+        // Start one image height above the canvas to ensure continuous coverage
+        for (int y = groundY - 200; y <= yMax + 200; y += 200) {
             gc.drawImage(mark, 0, y);
         }
 
