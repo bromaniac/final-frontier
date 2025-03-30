@@ -6,9 +6,10 @@ import javafx.geometry.Rectangle2D;
 import javafx.scene.Scene;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
+import javafx.scene.control.Button;
 import javafx.scene.image.Image;
 import javafx.scene.input.KeyCode;
-import javafx.scene.layout.StackPane;
+import javafx.scene.layout.Pane;
 import javafx.stage.Stage;
 
 import java.util.HashSet;
@@ -25,6 +26,9 @@ public class FinalFrontier extends Application {
     private int xMax, yMax;
     private Asteroid[] asteroids;
     private AnimationTimer gameLoop;
+    private Pane root;
+    private boolean gameOver = false;
+    private Button restartButton;
 
     public static void main(String[] args) {
         launch(args);
@@ -33,7 +37,7 @@ public class FinalFrontier extends Application {
     @Override
     public void start(Stage primaryStage) {
         // Create the game window
-        StackPane root = new StackPane();
+        root = new Pane();
         canvas = new Canvas(300, 400);
         gc = canvas.getGraphicsContext2D();
         root.getChildren().add(canvas);
@@ -83,8 +87,12 @@ public class FinalFrontier extends Application {
         gameLoop = new AnimationTimer() {
             @Override
             public void handle(long now) {
-                updateGame();
-                render();
+                if (!gameOver) {
+                    updateGame();
+                    render();
+                } else {
+                    renderGameOver();
+                }
             }
         };
         gameLoop.start();
@@ -163,23 +171,48 @@ public class FinalFrontier extends Application {
             Rectangle2D shipBounds = ship.getBounds();
 
             if (shipBounds.intersects(asteroidBounds)) {
-                gameOver();
+                gameOver = true;
                 break; // Exit loop after game over
             }
         }
     }
 
-    private void gameOver() {
-        // Stop the game loop
-        if (gameLoop != null) {
-            gameLoop.stop();
-        }
+    private void renderGameOver() {
+        // Clear the canvas
+        gc.setFill(javafx.scene.paint.Color.BLACK);
+        gc.fillRect(0, 0, canvas.getWidth(), canvas.getHeight());
 
         // Display "Game Over" message
         gc.setFill(javafx.scene.paint.Color.RED);
-        gc.setFont(new javafx.scene.text.Font("Arial", 48));
-        gc.fillText("GAME OVER", (double) xMax / 2 - 120, (double) yMax / 2);
+        gc.setFont(new javafx.scene.text.Font("Arial", 32));
+        
+        // Create a Text object to get accurate measurements
+        javafx.scene.text.Text text = new javafx.scene.text.Text("GAME OVER");
+        text.setFont(gc.getFont());
+        
+        // Calculate text position to center it
+        double textX = (canvas.getWidth() - text.getLayoutBounds().getWidth()) / 2;
+        double textY = (canvas.getHeight() + text.getLayoutBounds().getHeight()) / 2;
+        gc.fillText("GAME OVER", textX, textY);
 
-        System.out.println("Game Over - Ship collided with asteroid");
+        // Create and position button if not already created
+        if (restartButton == null) {
+            restartButton = new Button("Restart");
+            restartButton.setStyle("-fx-font-size: 16px; -fx-padding: 5px 10px; -fx-background-color: #4CAF50; -fx-text-fill: white; -fx-cursor: hand;");
+            
+            // Position button in the bottom third of the window
+            restartButton.setLayoutX((canvas.getWidth() - 80) / 2); // Centered horizontally
+            restartButton.setLayoutY(canvas.getHeight() * 0.7); // Position at 70% of window height
+            
+            restartButton.setOnAction(e -> {
+                // Reset game state and restart
+                root.getChildren().remove(restartButton);
+                restartButton = null;
+                gameOver = false;
+                initGame();
+                startGameLoop();
+            });
+            root.getChildren().add(restartButton);
+        }
     }
 }
