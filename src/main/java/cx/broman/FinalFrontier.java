@@ -10,11 +10,15 @@ import javafx.scene.control.Button;
 import javafx.scene.image.Image;
 import javafx.scene.input.KeyCode;
 import javafx.scene.layout.Pane;
+import javafx.scene.paint.Color;
 import javafx.stage.Stage;
 
 import java.util.HashSet;
 import java.util.Objects;
 import java.util.Set;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Random;
 
 public class FinalFrontier extends Application {
     private final Set<KeyCode> pressedKeys = new HashSet<>();
@@ -29,6 +33,12 @@ public class FinalFrontier extends Application {
     private Pane root;
     private boolean gameOver = false;
     private Button restartButton;
+    private boolean showExplosion = false;
+    private double explosionX, explosionY;
+    private long explosionStartTime = 0;
+    private static final long EXPLOSION_DURATION = 1_000_000_000L; // 1 second in nanoseconds
+    private List<Particle> particles;
+    private Random random;
 
     public static void main(String[] args) {
         launch(args);
@@ -46,6 +56,8 @@ public class FinalFrontier extends Application {
         primaryStage.setScene(scene);
         primaryStage.setTitle("Final Frontier");
 
+        random = new Random();
+        particles = new ArrayList<>();
         initGame();
         setupInputHandling(scene);
         startGameLoop();
@@ -56,6 +68,9 @@ public class FinalFrontier extends Application {
     private void initGame() {
         xMax = (int) canvas.getWidth() - 1;
         yMax = (int) canvas.getHeight() - 1;
+        showExplosion = false;
+        explosionStartTime = 0;
+        particles.clear();
 
         // Load images
         try {
@@ -73,8 +88,177 @@ public class FinalFrontier extends Application {
             }
         } catch (Exception e) {
             System.err.println("Error loading images: " + e.getMessage());
+            e.printStackTrace();
             System.exit(1);
         }
+    }
+
+    private void createExplosion(double x, double y) {
+        int particleCount = 50; // Increased number of particles
+        for (int i = 0; i < particleCount; i++) {
+            double angle = random.nextDouble() * 2 * Math.PI;
+            double speed = random.nextDouble() * 3 + 2; // Increased speed
+            double life = random.nextDouble() * 0.8 + 0.7; // Longer life
+            double size = random.nextDouble() * 4 + 2; // Varying sizes
+            
+            // Create a more dynamic color palette
+            Color color;
+            if (random.nextDouble() < 0.6) {
+                // Main explosion color (orange-red)
+                color = Color.rgb(
+                    255,
+                    (int)(random.nextDouble() * 100 + 50),
+                    0,
+                    random.nextDouble() * 0.7 + 0.3
+                );
+            } else if (random.nextDouble() < 0.8) {
+                // Yellow-white core
+                color = Color.rgb(
+                    255,
+                    255,
+                    (int)(random.nextDouble() * 100 + 150),
+                    random.nextDouble() * 0.7 + 0.3
+                );
+            } else {
+                // Red outer particles
+                color = Color.rgb(
+                    255,
+                    0,
+                    0,
+                    random.nextDouble() * 0.5 + 0.2
+                );
+            }
+            
+            particles.add(new Particle(
+                x,
+                y,
+                Math.cos(angle) * speed,
+                Math.sin(angle) * speed,
+                life,
+                color,
+                size
+            ));
+        }
+    }
+
+    private void updateParticles() {
+        particles.removeIf(Particle::isDead);
+        for (Particle p : particles) {
+            p.update();
+        }
+    }
+
+    private void renderParticles() {
+        for (Particle p : particles) {
+            double alpha = p.life / p.maxLife;
+            gc.save(); // Save the current graphics context state
+            
+            // Set up the particle's transform
+            gc.translate(p.x, p.y);
+            gc.rotate(p.rotation);
+            
+            // Draw the particle
+            gc.setFill(Color.color(
+                p.color.getRed(),
+                p.color.getGreen(),
+                p.color.getBlue(),
+                alpha
+            ));
+            
+            // Draw a more interesting particle shape
+            gc.fillOval(-p.size/2, -p.size/2, p.size, p.size);
+            
+            // Add a glow effect
+            gc.setFill(Color.color(
+                p.color.getRed(),
+                p.color.getGreen(),
+                p.color.getBlue(),
+                alpha * 0.3
+            ));
+            gc.fillOval(-p.size, -p.size, p.size * 2, p.size * 2);
+            
+            gc.restore(); // Restore the graphics context state
+        }
+    }
+
+    private void checkCollision() {
+        for (Asteroid asteroid : asteroids) {
+            if (asteroid == null) continue;
+            Rectangle2D asteroidBounds = asteroid.getBounds();
+            Rectangle2D shipBounds = ship.getBounds();
+
+            if (shipBounds.intersects(asteroidBounds)) {
+                gameOver = true;
+                showExplosion = true;
+                explosionStartTime = 0;
+                explosionX = ship.getX() + ship.getImage().getWidth() / 2;
+                explosionY = ship.getY() + ship.getImage().getHeight() / 2;
+                createExplosion(explosionX, explosionY);
+                break;
+            }
+        }
+    }
+
+    private void render() {
+        // Clear canvas
+        gc.clearRect(0, 0, canvas.getWidth(), canvas.getHeight());
+
+        // Draw scrolling background
+        for (int y = groundY - 200; y <= yMax + 200; y += 200) {
+            gc.drawImage(mark, 0, y);
+        }
+
+        // Draw spaceship if game is not over
+        if (!gameOver) {
+            gc.drawImage(ship.getImage(), ship.getX(), ship.getY());
+        }
+
+        // Draw asteroids
+        for (Asteroid asteroid : asteroids) {
+            gc.drawImage(asteroid.getImage(), asteroid.getX(), asteroid.getY());
+        }
+
+        // Draw particles
+        renderParticles();
+    }
+
+    private void updateGame() {
+        if (!gameOver) {
+            // Update ship position based on pressed keys
+            if (pressedKeys.contains(KeyCode.LEFT)) {
+                ship.moveLeft(0);
+            }
+            if (pressedKeys.contains(KeyCode.RIGHT)) {
+                ship.moveRight(xMax);
+            }
+
+            ship.setShooting(pressedKeys.contains(KeyCode.SPACE));
+
+            // Update ground position (scrolling background)
+            groundY = (groundY + 2) % 200;
+
+            // Check and update asteroids
+            checkAsteroids();
+            moveAsteroids();
+
+            // Check for collisions
+            checkCollision();
+
+            // Draw laser
+            if (ship.isShooting()) {
+                gc.setFill(Color.GREEN);
+                gc.fillRect(ship.getX() + 18, ship.getY(), 2, -ship.getY());
+                // Check for collision with asteroids
+                for (Asteroid asteroid : asteroids) {
+                    if (asteroid.checkCollision(ship.getX())) {
+                        asteroid.resetPosition();
+                    }
+                }
+            }
+        }
+
+        // Update particles
+        updateParticles();
     }
 
     private void setupInputHandling(Scene scene) {
@@ -91,64 +275,25 @@ public class FinalFrontier extends Application {
                     updateGame();
                     render();
                 } else {
-                    renderGameOver();
+                    if (showExplosion) {
+                        // If this is the first frame of explosion
+                        if (explosionStartTime == 0) {
+                            explosionStartTime = now;
+                        }
+                        // Show explosion for EXPLOSION_DURATION
+                        if (now - explosionStartTime < EXPLOSION_DURATION) {
+                            render(); // Keep rendering the game state with explosion
+                        } else {
+                            showExplosion = false;
+                            renderGameOver();
+                        }
+                    } else {
+                        renderGameOver();
+                    }
                 }
             }
         };
         gameLoop.start();
-    }
-
-    private void updateGame() {
-        // Update ship position based on pressed keys
-        if (pressedKeys.contains(KeyCode.LEFT)) {
-            ship.moveLeft(0);
-        }
-        if (pressedKeys.contains(KeyCode.RIGHT)) {
-            ship.moveRight(xMax);
-        }
-
-        ship.setShooting(pressedKeys.contains(KeyCode.SPACE));
-
-        // Update ground position (scrolling background)
-        groundY = (groundY + 2) % 200;
-
-        // Check and update asteroids
-        checkAsteroids();
-        moveAsteroids();
-
-        // Check for collisions
-        checkCollision();   // Call the new collision detection logic
-
-        // Draw laser
-        if (ship.isShooting()) {
-            gc.setFill(javafx.scene.paint.Color.GREEN);
-            gc.fillRect(ship.getX() + 18, ship.getY(), 2, -ship.getY());
-            // Check for collision with asteroids
-            for (Asteroid asteroid : asteroids) {
-                if (asteroid.checkCollision(ship.getX())) {
-                    asteroid.resetPosition();
-                }
-            }
-        }
-    }
-
-    private void render() {
-        // Clear canvas
-        gc.clearRect(0, 0, canvas.getWidth(), canvas.getHeight());
-
-        // Draw scrolling background
-        // Start one image height above the canvas to ensure continuous coverage
-        for (int y = groundY - 200; y <= yMax + 200; y += 200) {
-            gc.drawImage(mark, 0, y);
-        }
-
-        // Draw spaceship
-        gc.drawImage(ship.getImage(), ship.getX(), ship.getY());
-
-        // Draw asteroids
-        for (Asteroid asteroid : asteroids) {
-            gc.drawImage(asteroid.getImage(), asteroid.getX(), asteroid.getY());
-        }
     }
 
     private void checkAsteroids() {
@@ -162,19 +307,6 @@ public class FinalFrontier extends Application {
     private void moveAsteroids() {
         for (Asteroid asteroid : asteroids) {
             asteroid.move();
-        }
-    }
-
-    private void checkCollision() {
-        for (Asteroid asteroid : asteroids) {
-            if (asteroid == null) continue; // Skip if the asteroid doesn't exist
-            Rectangle2D asteroidBounds = asteroid.getBounds();
-            Rectangle2D shipBounds = ship.getBounds();
-
-            if (shipBounds.intersects(asteroidBounds)) {
-                gameOver = true;
-                break; // Exit loop after game over
-            }
         }
     }
 
