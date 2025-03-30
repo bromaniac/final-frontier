@@ -8,6 +8,7 @@
 *.jar
 *.war
 *.ear
+dependency-reduced-pom.xml
 
 # Log files
 *.log
@@ -32,7 +33,6 @@ build/
 
 # NetBeans specific files
 nbproject/private/
-build/
 nbbuild/
 dist/
 nbdist/
