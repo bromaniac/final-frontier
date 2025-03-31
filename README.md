@@ -2,8 +2,8 @@
 A simple space-themed game built with JavaFX where players control a spaceship to avoid asteroids.
 
 A long time ago (2000! 25 years ago) I started creating this stupid "game" as an Applet to learn Java
-using JDK 1.1 LOL. I decided to use it as a starting point to play around with LLMs to learn more 
-about them.
+using JDK 1.1 LOL. I decided to use it as a starting point to play around with LLMs to learn more
+about them. This original code is available in FinalFrontier.original.
 
 This is a work in progress...
 
@@ -49,7 +49,7 @@ java -jar target/final-frontier-1.0.jar
 
 ## Development
 This project is a simple JavaFX application structured in a standard Maven project layout:
-``` 
+```
 src/
 ├── main/
 │   ├── java/

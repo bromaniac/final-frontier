@@ -1,0 +1,162 @@
+/* 	Ett första försök att skriva en spelapplet med scrollande bakgrund och ett styrbart skepp...
+	Fredrik Broman, fredrik@broman.cx
+	Komplierad för VM 1.1
+*/
+
+import java.applet.*;
+import java.awt.*;
+import java.awt.event.*;
+
+public class FinalFrontier extends Applet implements Runnable, KeyListener {
+	public Thread programthread = null;
+	Image bufferimage;
+	Graphics bufferg;
+	Image mark, aster0, aster1, aster2, skepp;
+	int groundY = -200;
+	int sleeptime = 60;
+	int skeppX = 140;
+	final int skeppY = 350;
+	boolean skjuter = false;
+	int xMax, yMax;
+	int maxAsteroids = 3;
+	Image aster[] = new Image[maxAsteroids];
+	int asteroidX[] = new int[maxAsteroids];
+    	int asteroidY[] = new int[maxAsteroids];	
+    	int asteroidDY[] = new int[maxAsteroids];
+		
+	public void start() {
+		 if (programthread == null) {
+		 	programthread = new Thread(this,"programthread");
+         		programthread.start();
+    		}
+	}
+	
+	public void stop() {
+		 if ((programthread != null) && programthread.isAlive())
+       			 programthread.interrupt();
+   		 programthread = null;
+	}
+	
+	public void  init() {
+		xMax = getSize().width-1;			// xMax sätts till fönstret -1
+		yMax = getSize().height-1;			// yMax sätts till fönstret -1
+	
+	addKeyListener(this);
+		
+    		bufferimage=createImage(getSize().width, getSize().height);
+    		bufferg=bufferimage.getGraphics();
+    		MediaTracker tracker=new MediaTracker(this);
+    		mark=getImage(getDocumentBase(),"mark.gif");    		
+    		tracker.addImage(mark,4);
+    		skepp=getImage(getDocumentBase(),"skepp.gif");
+    		tracker.addImage(skepp,3);
+   
+    		for (int i = 0; i < maxAsteroids; i++) {
+    			aster[i] = getImage(getDocumentBase(),"aster" + i + ".gif");	// aster[i] filnamn
+			tracker.addImage(aster[i], i);				// addera aster[i] bilden
+			initAsteroid(i);						// kör INIT för aster nr i
+    			}
+    		
+    		try {tracker.waitForAll();}
+   		catch(InterruptedException e)	{
+        		System.out.println("Någonting stoppade inladdningen...");
+    		}
+    		
+    	}
+		
+	public synchronized void paint(Graphics g) {
+		 if (bufferimage!=null) g.drawImage(bufferimage,0,0,this);
+	}
+	
+	public synchronized void update(Graphics g) {
+		paint(g) ;
+	}
+	
+
+	public void run() {
+		while(true) {
+	scrollaHimmel();
+	ritaSkepp();
+	ritaLaser();
+	ritaAsteroider();
+	kollaAster();
+	
+	update(getGraphics());
+	
+		try {Thread.sleep(sleeptime);}
+       		catch(InterruptedException e) {}
+		}// while slut
+		
+	}// run slut
+	
+	public void scrollaHimmel(){
+	if (groundY > 600) groundY = yMax;
+        bufferg.drawImage(mark, 0, groundY,this);
+        if (groundY > -2) bufferg.drawImage(mark, 0, (groundY - 600),this);
+        groundY +=2;
+	}
+	
+	
+	public void ritaSkepp() {
+	if (skeppX > 265) skeppX = 265;
+	if (skeppX < 0) skeppX = 0; 
+	bufferg.drawImage(skepp, skeppX, skeppY, this);	
+	}
+	
+	public void ritaLaser() {
+	if (skjuter) {
+		bufferg.setColor(Color.green);
+		bufferg.drawLine(skeppX+18, skeppY, skeppX+18, 0);
+		//skjuter--;
+		for (int i=0; i<maxAsteroids;  i++) {
+		if (skeppX - asteroidX[i] > - 5  && skeppX - asteroidX[i] <  5) {
+			initAsteroid(i);
+		}
+	}
+	}
+	}// ritaLaser slut
+	
+	public void initAsteroid(int n) {
+    		asteroidX[n]=(int) (Math.random()*250.0); //asteroidens start X
+		asteroidY[n]=(int) (Math.random()*400.0-650.0); //asteroidens start Y, -650 = utanför skärmkanten
+		
+	}
+	
+	public void ritaAsteroider() {
+		for(int i=0; i < maxAsteroids; i++ ) {
+			bufferg.drawImage(aster[i], asteroidX[i], asteroidY[i], this);	// rita asteroiderna
+			asteroidY[i] += 4; // asteroidernas hastighet
+		}
+	}
+
+	// kollar om asteroiderna åker ur bild nedtill
+	public void kollaAster(){						
+		for(int i=0; i < maxAsteroids; i++){
+			if (asteroidY[i] > yMax){	
+				initAsteroid(i);					
+			}	
+		}
+	}	
+		
+	// Key Events
+  	public void keyPressed			(KeyEvent e) {
+  		
+  		
+  		if (e.getKeyCode() == KeyEvent.VK_RIGHT) {
+				skeppX +=2;
+			} else if (e.getKeyCode() == KeyEvent.VK_LEFT) {
+				skeppX -=2;
+			} else if (e.getKeyCode() == KeyEvent.VK_SPACE) {
+				skjuter= true;
+			}	
+  		
+  		}
+	public void keyReleased			(KeyEvent e) {
+		
+			if (e.getKeyCode() == KeyEvent.VK_SPACE)
+				skjuter= false;
+		
+		}
+	public void keyTyped			(KeyEvent e) {}
+	
+}
