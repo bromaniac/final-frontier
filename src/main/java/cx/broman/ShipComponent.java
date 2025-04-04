@@ -12,12 +12,19 @@ public class ShipComponent extends Component {
     private boolean shooting = false;
 
     public void moveLeft() {
-        entity.translateX(-speed * tpf());
+        double moveAmount = speed * tpf();
+        if (entity.getX() - moveAmount >= 0) {
+            entity.translateX(-moveAmount);
+        }
     }
 
     public void moveRight() {
         if (entity != null) {
-            entity.translateX(speed * tpf());
+            double moveAmount = speed * tpf();
+            // Use getAppWidth() for the right boundary check
+            if (entity.getX() + entity.getWidth() + moveAmount <= getAppWidth()) {
+                entity.translateX(moveAmount);
+            }
         }
     }
 
