@@ -3,41 +3,29 @@ package cx.broman;
 import javafx.scene.paint.Color;
 
 public class Particle {
-    double x, y;
-    double vx, vy;
-    double life;
-    double maxLife;
-    Color color;
-    double size;
-    double rotation;
-    double rotationSpeed;
+    public double x, y, velX, velY, life, maxLife, size, rotation;
+    public Color color;
 
-    public Particle(double x, double y, double vx, double vy, double life, Color color, double size) {
+    public Particle(double x, double y, double velX, double velY, double life, Color color, double size) {
         this.x = x;
         this.y = y;
-        this.vx = vx;
-        this.vy = vy;
+        this.velX = velX;
+        this.velY = velY;
         this.life = life;
         this.maxLife = life;
         this.color = color;
         this.size = size;
         this.rotation = Math.random() * 360;
-        this.rotationSpeed = (Math.random() - 0.5) * 10;
     }
 
     public void update() {
-        x += vx;
-        y += vy;
-        // Add some gravity effect
-        vy += 0.1;
-        // Slow down particles over time
-        vx *= 0.98;
-        vy *= 0.98;
+        x += velX;
+        y += velY;
         life -= 0.016; // Assuming 60 FPS
-        rotation += rotationSpeed;
+        rotation += 1;
     }
 
     public boolean isDead() {
         return life <= 0;
     }
-} 
+}
