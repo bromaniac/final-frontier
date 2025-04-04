@@ -9,7 +9,6 @@ public class BackgroundScrollComponent extends Component {
 
     private static final Logger log = Logger.get(BackgroundScrollComponent.class); // Logger instance
 
-    private double scrollSpeed = 100.0; // Pixels per second
     private double textureHeight;
 
     @Override
@@ -32,9 +31,6 @@ public class BackgroundScrollComponent extends Component {
             } else {
                  log.info("Using entity height as fallback: " + this.textureHeight + " for entity: " + entity);
             }
-        } else {
-             // Log the determined height only once per entity addition
-             // log.info("Texture height determined: " + this.textureHeight + " for entity: " + entity);
         }
     }
 
@@ -43,6 +39,8 @@ public class BackgroundScrollComponent extends Component {
         if (textureHeight <= 0) return; // Do nothing if height is invalid
 
         // Move the entity down
+        // Pixels per second
+        double scrollSpeed = 100.0;
         entity.translateY(scrollSpeed * tpf);
 
         // Log values for debugging
@@ -51,7 +49,7 @@ public class BackgroundScrollComponent extends Component {
         // Check if the entity's top edge has moved completely below the screen
         if (entity.getY() >= FXGL.getAppHeight()) {
             // If it has, move it back up by two texture heights relative to its current position.
-            // This places it directly above where the other background entity *was* when this one went off screen.
+            // This places it directly above where the other background entity *was* when this one went off-screen.
             double currentY = entity.getY();
             // Let's add a small buffer just in case of floating point inaccuracies
             double resetAmount = 2 * textureHeight;

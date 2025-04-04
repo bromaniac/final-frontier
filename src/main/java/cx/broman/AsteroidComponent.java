@@ -6,9 +6,8 @@ import static com.almasb.fxgl.dsl.FXGL.*;
 
 public class AsteroidComponent extends Component {
 
-    private double speed = 50;
-
     public void move() {
+        double speed = 50;
         entity.translateY(speed * tpf());
     }
 

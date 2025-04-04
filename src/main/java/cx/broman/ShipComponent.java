@@ -8,7 +8,7 @@ import static com.almasb.fxgl.dsl.FXGL.*;
 
 public class ShipComponent extends Component {
 
-    private double speed = 100;
+    private final double speed = 100;
     private boolean shooting = false;
 
     public void moveLeft() {

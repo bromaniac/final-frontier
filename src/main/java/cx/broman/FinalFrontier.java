@@ -19,9 +19,9 @@ import java.util.Random;
 public class FinalFrontier extends GameApplication {
 
     private Entity ship;
-    private List<Entity> asteroids = new ArrayList<>();
-    private List<Particle> particles = new ArrayList<>();
-    private Random random = new Random();
+    private final List<Entity> asteroids = new ArrayList<>();
+    private final List<Particle> particles = new ArrayList<>();
+    private final Random random = new Random();
     // private int groundY = -200; // Removed unused variable
     private boolean gameOver = false;
     private long explosionStartTime = 0;
