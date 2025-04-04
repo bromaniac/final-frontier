@@ -1,7 +1,6 @@
 package cx.broman;
 
 import com.almasb.fxgl.entity.Entity;
-import com.almasb.fxgl.physics.CollisionHandler;
 
 public class GameCollisionHandler extends com.almasb.fxgl.physics.CollisionHandler {
 

@@ -3,24 +3,17 @@ package cx.broman;
 import com.almasb.fxgl.app.GameApplication;
 import com.almasb.fxgl.app.GameSettings;
 import com.almasb.fxgl.entity.Entity;
-import com.almasb.fxgl.entity.EntityFactory; // Corrected import if needed, or remove if unused
 import com.almasb.fxgl.entity.SpawnData;
-import com.almasb.fxgl.entity.Spawns; // Added import for @Spawns if using annotation-based factory
 import com.almasb.fxgl.input.Input;
 import com.almasb.fxgl.physics.PhysicsWorld;
 import com.almasb.fxgl.texture.Texture; // Added import for Texture
-import javafx.geometry.Point2D;
-import javafx.geometry.VerticalDirection; // Added import for VerticalDirection
 import javafx.scene.image.Image; // Added import
 import javafx.scene.input.KeyCode;
 import javafx.scene.paint.Color;
-import javafx.util.Duration; // Added import
-
 import static com.almasb.fxgl.dsl.FXGL.*; // Added static import for DSL
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
 import java.util.Random;
 
 public class FinalFrontier extends GameApplication {

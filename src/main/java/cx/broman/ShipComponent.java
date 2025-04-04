@@ -2,8 +2,6 @@ package cx.broman;
 
 import com.almasb.fxgl.entity.SpawnData;
 import com.almasb.fxgl.entity.component.Component;
-import javafx.geometry.Point2D;
-import javafx.scene.input.KeyCode;
 import javafx.util.Duration;
 
 import static com.almasb.fxgl.dsl.FXGL.*;
