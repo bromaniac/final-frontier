@@ -1,96 +1,176 @@
 package cx.broman;
 
-import javafx.animation.AnimationTimer;
-import javafx.application.Application;
-import javafx.geometry.Rectangle2D;
-import javafx.scene.Scene;
-import javafx.scene.canvas.Canvas;
-import javafx.scene.canvas.GraphicsContext;
-import javafx.scene.control.Button;
-import javafx.scene.image.Image;
+import com.almasb.fxgl.app.GameApplication;
+import com.almasb.fxgl.app.GameSettings;
+import com.almasb.fxgl.entity.Entity;
+import com.almasb.fxgl.entity.EntityFactory; // Corrected import if needed, or remove if unused
+import com.almasb.fxgl.entity.SpawnData;
+import com.almasb.fxgl.entity.Spawns; // Added import for @Spawns if using annotation-based factory
+import com.almasb.fxgl.input.Input;
+import com.almasb.fxgl.physics.PhysicsWorld;
+import com.almasb.fxgl.texture.Texture; // Added import for Texture
+import javafx.geometry.Point2D;
+import javafx.geometry.VerticalDirection; // Added import for VerticalDirection
+import javafx.scene.image.Image; // Added import
 import javafx.scene.input.KeyCode;
-import javafx.scene.layout.Pane;
 import javafx.scene.paint.Color;
-import javafx.stage.Stage;
+import javafx.util.Duration; // Added import
 
-import java.util.HashSet;
-import java.util.Objects;
-import java.util.Set;
+import static com.almasb.fxgl.dsl.FXGL.*; // Added static import for DSL
+
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.Random;
 
-public class FinalFrontier extends Application {
-    private final Set<KeyCode> pressedKeys = new HashSet<>();
-    private Canvas canvas;
-    private GraphicsContext gc;
-    private Image mark;
-    private Ship ship;
-    private int groundY = -200;
-    private int xMax, yMax;
-    private Asteroid[] asteroids;
-    private AnimationTimer gameLoop;
-    private Pane root;
+public class FinalFrontier extends GameApplication {
+
+    private Entity ship;
+    private List<Entity> asteroids = new ArrayList<>();
+    private List<Particle> particles = new ArrayList<>();
+    private Random random = new Random();
+    // private int groundY = -200; // Removed unused variable
     private boolean gameOver = false;
-    private Button restartButton;
-    private boolean showExplosion = false;
-    private double explosionX, explosionY;
     private long explosionStartTime = 0;
     private static final long EXPLOSION_DURATION = 1_000_000_000L; // 1 second in nanoseconds
-    private List<Particle> particles;
-    private Random random;
+    private boolean showExplosion = false;
+    private double explosionX, explosionY;
 
     public static void main(String[] args) {
         launch(args);
     }
 
     @Override
-    public void start(Stage primaryStage) {
-        // Create the game window
-        root = new Pane();
-        canvas = new Canvas(300, 400);
-        gc = canvas.getGraphicsContext2D();
-        root.getChildren().add(canvas);
-
-        Scene scene = new Scene(root);
-        primaryStage.setScene(scene);
-        primaryStage.setTitle("Final Frontier");
-
-        random = new Random();
-        particles = new ArrayList<>();
-        initGame();
-        setupInputHandling(scene);
-        startGameLoop();
-
-        primaryStage.show();
+    protected void initSettings(GameSettings settings) {
+        settings.setTitle("Final Frontier");
+        settings.setWidth(300);
+        settings.setHeight(400);
     }
 
-    private void initGame() {
-        xMax = (int) canvas.getWidth() - 1;
-        yMax = (int) canvas.getHeight() - 1;
-        showExplosion = false;
-        explosionStartTime = 0;
-        particles.clear();
+    @Override
+    protected void initInput() {
+        Input input = getInput();
 
-        // Load images
-        try {
-            String baseUrl = Objects.requireNonNull(getClass().getResource("")).toExternalForm();
-            mark = new Image(baseUrl + "mark.gif");
-            Image ship = new Image(baseUrl + "skepp.gif");
-            this.ship = new Ship(ship, 140, 350);
-
-            // Initialize asteroids
-            int maxAsteroids = 3;
-            asteroids = new Asteroid[maxAsteroids];
-            for (int i = 0; i < maxAsteroids; i++) {
-                Image asteroidImage = new Image(baseUrl + "aster" + i + ".gif");
-                asteroids[i] = new Asteroid(asteroidImage);
+        input.addAction(new GameUserAction("Move Left") { // Renamed UserAction
+            @Override
+            protected void onAction() {
+                if (ship != null) {
+                    ship.getComponent(ShipComponent.class).moveLeft();
+                }
             }
-        } catch (Exception e) {
-            System.err.println("Error loading images: " + e.getMessage());
-            e.printStackTrace();
-            System.exit(1);
+        }, KeyCode.LEFT);
+
+        input.addAction(new GameUserAction("Move Right") { // Renamed UserAction
+            @Override
+            protected void onAction() {
+                if (ship != null) {
+                    ship.getComponent(ShipComponent.class).moveRight();
+                }
+            }
+        }, KeyCode.RIGHT);
+
+        input.addAction(new GameUserAction("Shoot") { // Renamed UserAction
+            @Override
+            protected void onActionBegin() {
+                if (ship != null) {
+                    ship.getComponent(ShipComponent.class).shoot();
+                }
+            }
+        }, KeyCode.SPACE);
+    }
+
+    @Override
+    protected void initGame() {
+        getGameWorld().addEntityFactory(new GameEntityFactory());
+
+        // Create two scrolling background entities for seamless looping
+        Texture backgroundTexture = texture("cx/broman/mark.gif"); // Load the texture once
+
+        // Entity 1 - Initially visible
+        entityBuilder()
+                .at(0, 0)
+                .zIndex(-1) // Draw behind everything else
+                .view(backgroundTexture.copy()) // Use a copy for the view
+                .with(new BackgroundScrollComponent())
+                .buildAndAttach();
+
+        // Entity 2 - Positioned directly above Entity 1, initially off-screen
+        entityBuilder()
+                .at(0, -backgroundTexture.getHeight()) // Position above the first one
+                .zIndex(-1)
+                .view(backgroundTexture.copy()) // Use another copy
+                .with(new BackgroundScrollComponent())
+                .buildAndAttach();
+
+
+        // Create ship and load its image
+        ship = spawn("ship", new SpawnData(140, 350).put("shipImage", image("cx/broman/skepp.gif"))); // Corrected path
+
+        // Initialize asteroids
+        int maxAsteroids = 3;
+        for (int i = 0; i < maxAsteroids; i++) {
+            Image asteroidImage = image("cx/broman/aster" + i + ".gif"); // Corrected path
+            Entity asteroid = spawn("asteroid", new SpawnData(0, 0).put("asteroidImage", asteroidImage));
+            asteroids.add(asteroid);
         }
+
+        // Removed manual background scrolling timer
+    }
+
+    @Override
+    protected void initPhysics() {
+        PhysicsWorld physics = getPhysicsWorld();
+        physics.addCollisionHandler(new GameCollisionHandler(EntityType.SHIP, EntityType.ASTEROID) { // Renamed CollisionHandler
+            @Override
+            protected void onCollisionBegin(Entity ship, Entity asteroid) {
+                gameOver = true;
+                showExplosion = true;
+                explosionStartTime = 0;
+                explosionX = ship.getX() + ship.getWidth() / 2;
+                explosionY = ship.getY() + ship.getHeight() / 2;
+                createExplosion(explosionX, explosionY);
+            }
+        });
+    }
+
+    @Override
+    protected void onUpdate(double tpf) {
+        if (!gameOver) {
+            // Check and update asteroids
+            checkAsteroids();
+            moveAsteroids();
+
+            // Update particles
+            updateParticles();
+        } else {
+            if (showExplosion) {
+                // If this is the first frame of explosion
+                if (explosionStartTime == 0) {
+                    explosionStartTime = System.nanoTime();
+                }
+                // Show explosion for EXPLOSION_DURATION
+                if (System.nanoTime() - explosionStartTime < EXPLOSION_DURATION) {
+                    // Keep rendering the game state with explosion
+                } else {
+                    showExplosion = false;
+                    renderGameOver();
+                }
+            } else {
+                renderGameOver();
+            }
+        }
+    }
+
+    private void checkAsteroids() {
+        asteroids.forEach(asteroid -> {
+            if (asteroid.getY() > getAppHeight()) {
+                asteroid.getComponent(AsteroidComponent.class).resetPosition();
+            }
+        });
+    }
+
+    private void moveAsteroids() {
+        asteroids.forEach(asteroid -> asteroid.getComponent(AsteroidComponent.class).move());
     }
 
     private void createExplosion(double x, double y) {
@@ -100,43 +180,43 @@ public class FinalFrontier extends Application {
             double speed = random.nextDouble() * 3 + 2; // Increased speed
             double life = random.nextDouble() * 0.8 + 0.7; // Longer life
             double size = random.nextDouble() * 4 + 2; // Varying sizes
-            
+
             // Create a more dynamic color palette
             Color color;
             if (random.nextDouble() < 0.6) {
                 // Main explosion color (orange-red)
                 color = Color.rgb(
-                    255,
-                    (int)(random.nextDouble() * 100 + 50),
-                    0,
-                    random.nextDouble() * 0.7 + 0.3
+                        255,
+                        (int) (random.nextDouble() * 100 + 50),
+                        0,
+                        random.nextDouble() * 0.7 + 0.3
                 );
             } else if (random.nextDouble() < 0.8) {
                 // Yellow-white core
                 color = Color.rgb(
-                    255,
-                    255,
-                    (int)(random.nextDouble() * 100 + 150),
-                    random.nextDouble() * 0.7 + 0.3
+                        255,
+                        255,
+                        (int) (random.nextDouble() * 100 + 150),
+                        random.nextDouble() * 0.7 + 0.3
                 );
             } else {
                 // Red outer particles
                 color = Color.rgb(
-                    255,
-                    0,
-                    0,
-                    random.nextDouble() * 0.5 + 0.2
+                        255,
+                        0,
+                        0,
+                        random.nextDouble() * 0.5 + 0.2
                 );
             }
-            
+
             particles.add(new Particle(
-                x,
-                y,
-                Math.cos(angle) * speed,
-                Math.sin(angle) * speed,
-                life,
-                color,
-                size
+                    x,
+                    y,
+                    Math.cos(angle) * speed,
+                    Math.sin(angle) * speed,
+                    life,
+                    color,
+                    size
             ));
         }
     }
@@ -148,204 +228,9 @@ public class FinalFrontier extends Application {
         }
     }
 
-    private void renderParticles() {
-        for (Particle p : particles) {
-            double alpha = p.life / p.maxLife;
-            gc.save(); // Save the current graphics context state
-            
-            // Set up the particle's transform
-            gc.translate(p.x, p.y);
-            gc.rotate(p.rotation);
-            
-            // Draw the particle
-            gc.setFill(Color.color(
-                p.color.getRed(),
-                p.color.getGreen(),
-                p.color.getBlue(),
-                alpha
-            ));
-            
-            // Draw a more interesting particle shape
-            gc.fillOval(-p.size/2, -p.size/2, p.size, p.size);
-            
-            // Add a glow effect
-            gc.setFill(Color.color(
-                p.color.getRed(),
-                p.color.getGreen(),
-                p.color.getBlue(),
-                alpha * 0.3
-            ));
-            gc.fillOval(-p.size, -p.size, p.size * 2, p.size * 2);
-            
-            gc.restore(); // Restore the graphics context state
-        }
-    }
-
-    private void checkCollision() {
-        for (Asteroid asteroid : asteroids) {
-            if (asteroid == null) continue;
-            Rectangle2D asteroidBounds = asteroid.getBounds();
-            Rectangle2D shipBounds = ship.getBounds();
-
-            if (shipBounds.intersects(asteroidBounds)) {
-                gameOver = true;
-                showExplosion = true;
-                explosionStartTime = 0;
-                explosionX = ship.getX() + ship.getImage().getWidth() / 2;
-                explosionY = ship.getY() + ship.getImage().getHeight() / 2;
-                createExplosion(explosionX, explosionY);
-                break;
-            }
-        }
-    }
-
-    private void render() {
-        // Clear canvas
-        gc.clearRect(0, 0, canvas.getWidth(), canvas.getHeight());
-
-        // Draw scrolling background
-        for (int y = groundY - 200; y <= yMax + 200; y += 200) {
-            gc.drawImage(mark, 0, y);
-        }
-
-        // Draw spaceship if game is not over
-        if (!gameOver) {
-            gc.drawImage(ship.getImage(), ship.getX(), ship.getY());
-        }
-
-        // Draw asteroids
-        for (Asteroid asteroid : asteroids) {
-            gc.drawImage(asteroid.getImage(), asteroid.getX(), asteroid.getY());
-        }
-
-        // Draw particles
-        renderParticles();
-    }
-
-    private void updateGame() {
-        if (!gameOver) {
-            // Update ship position based on pressed keys
-            if (pressedKeys.contains(KeyCode.LEFT)) {
-                ship.moveLeft(0);
-            }
-            if (pressedKeys.contains(KeyCode.RIGHT)) {
-                ship.moveRight(xMax);
-            }
-
-            ship.setShooting(pressedKeys.contains(KeyCode.SPACE));
-
-            // Update ground position (scrolling background)
-            groundY = (groundY + 2) % 200;
-
-            // Check and update asteroids
-            checkAsteroids();
-            moveAsteroids();
-
-            // Check for collisions
-            checkCollision();
-
-            // Draw laser
-            if (ship.isShooting()) {
-                gc.setFill(Color.GREEN);
-                gc.fillRect(ship.getX() + 18, ship.getY(), 2, -ship.getY());
-                // Check for collision with asteroids
-                for (Asteroid asteroid : asteroids) {
-                    if (asteroid.checkCollision(ship.getX())) {
-                        asteroid.resetPosition();
-                    }
-                }
-            }
-        }
-
-        // Update particles
-        updateParticles();
-    }
-
-    private void setupInputHandling(Scene scene) {
-        scene.setOnKeyPressed(e -> pressedKeys.add(e.getCode()));
-        scene.setOnKeyReleased(e -> pressedKeys.remove(e.getCode()));
-    }
-
-    private void startGameLoop() {
-        // Create and store the animation timer
-        gameLoop = new AnimationTimer() {
-            @Override
-            public void handle(long now) {
-                if (!gameOver) {
-                    updateGame();
-                    render();
-                } else {
-                    if (showExplosion) {
-                        // If this is the first frame of explosion
-                        if (explosionStartTime == 0) {
-                            explosionStartTime = now;
-                        }
-                        // Show explosion for EXPLOSION_DURATION
-                        if (now - explosionStartTime < EXPLOSION_DURATION) {
-                            render(); // Keep rendering the game state with explosion
-                        } else {
-                            showExplosion = false;
-                            renderGameOver();
-                        }
-                    } else {
-                        renderGameOver();
-                    }
-                }
-            }
-        };
-        gameLoop.start();
-    }
-
-    private void checkAsteroids() {
-        for (Asteroid asteroid : asteroids) {
-            if (asteroid.isOutOfBounds(yMax)) {
-                asteroid.resetPosition();
-            }
-        }
-    }
-
-    private void moveAsteroids() {
-        for (Asteroid asteroid : asteroids) {
-            asteroid.move();
-        }
-    }
-
     private void renderGameOver() {
-        // Clear the canvas
-        gc.setFill(javafx.scene.paint.Color.BLACK);
-        gc.fillRect(0, 0, canvas.getWidth(), canvas.getHeight());
-
         // Display "Game Over" message
-        gc.setFill(javafx.scene.paint.Color.RED);
-        gc.setFont(new javafx.scene.text.Font("Arial", 32));
-        
-        // Create a Text object to get accurate measurements
-        javafx.scene.text.Text text = new javafx.scene.text.Text("GAME OVER");
-        text.setFont(gc.getFont());
-        
-        // Calculate text position to center it
-        double textX = (canvas.getWidth() - text.getLayoutBounds().getWidth()) / 2;
-        double textY = (canvas.getHeight() + text.getLayoutBounds().getHeight()) / 2;
-        gc.fillText("GAME OVER", textX, textY);
-
-        // Create and position button if not already created
-        if (restartButton == null) {
-            restartButton = new Button("Restart");
-            restartButton.setStyle("-fx-font-size: 16px; -fx-padding: 5px 10px; -fx-background-color: #4CAF50; -fx-text-fill: white; -fx-cursor: hand;");
-            
-            // Position button in the bottom third of the window
-            restartButton.setLayoutX((canvas.getWidth() - 80) / 2); // Centered horizontally
-            restartButton.setLayoutY(canvas.getHeight() * 0.7); // Position at 70% of window height
-            
-            restartButton.setOnAction(e -> {
-                // Reset game state and restart
-                root.getChildren().remove(restartButton);
-                restartButton = null;
-                gameOver = false;
-                initGame();
-                startGameLoop();
-            });
-            root.getChildren().add(restartButton);
-        }
+        getGameScene().clearGameViews();
+        getGameScene().addUINode(getUIFactoryService().newText("GAME OVER", Color.RED, 32));
     }
 }
