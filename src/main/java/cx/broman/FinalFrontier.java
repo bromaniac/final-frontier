@@ -17,6 +17,7 @@ import javafx.util.Duration; // Re-added needed import
 import static com.almasb.fxgl.dsl.FXGL.*; // Added static import for DSL
 
 import java.util.ArrayList;
+import java.util.Iterator; // Import needed
 import java.util.List;
 import java.util.Random;
 
@@ -30,6 +31,7 @@ public class FinalFrontier extends GameApplication {
     private boolean gameOver = false;
     // Removed explosionStartTime, EXPLOSION_DURATION
     private boolean isGameOverScreenPending = false; // Flag to delay game over screen
+    private boolean isGameOverScreenRendered = false; // Flag to ensure renderGameOver runs only once
 
 
     public static void main(String[] args) {
@@ -50,33 +52,37 @@ public class FinalFrontier extends GameApplication {
         input.addAction(new GameUserAction("Move Left") { // Renamed UserAction
             @Override
             protected void onAction() {
-                if (ship != null) {
-                    ship.getComponent(ShipComponent.class).moveLeft();
-                }
+                if (gameOver || ship == null) return; // Check game over state
+                ship.getComponent(ShipComponent.class).moveLeft();
             }
         }, KeyCode.LEFT);
 
         input.addAction(new GameUserAction("Move Right") { // Renamed UserAction
             @Override
             protected void onAction() {
-                if (ship != null) {
-                    ship.getComponent(ShipComponent.class).moveRight();
-                }
+                if (gameOver || ship == null) return; // Check game over state
+                ship.getComponent(ShipComponent.class).moveRight();
             }
         }, KeyCode.RIGHT);
 
         input.addAction(new GameUserAction("Shoot") { // Renamed UserAction
             @Override
             protected void onActionBegin() {
-                if (ship != null) {
-                    ship.getComponent(ShipComponent.class).shoot();
-                }
+                if (gameOver || ship == null) return; // Check game over state
+                ship.getComponent(ShipComponent.class).shoot();
             }
         }, KeyCode.SPACE);
     }
 
     @Override
     protected void initGame() {
+        // Reset game state flags
+        gameOver = false;
+        isGameOverScreenPending = false;
+        isGameOverScreenRendered = false;
+        asteroids.clear(); // Clear the list before adding new ones
+        // Note: Existing entities are cleared by FXGL's startNewGame -> initGame sequence
+
         getGameWorld().addEntityFactory(new GameEntityFactory());
 
         // Create two scrolling background entities for seamless looping
@@ -173,29 +179,40 @@ public class FinalFrontier extends GameApplication {
 
     @Override
     protected void onUpdate(double tpf) {
-        if (!gameOver) {
-            // Check and update asteroids
-            checkAsteroids();
-            moveAsteroids();
+        // Always move asteroids
+        moveAsteroids();
 
+        if (!gameOver) {
+            // Check asteroids only if game is running
+            checkAsteroids();
 
             // Update manual particles (if still needed for game over - currently not used)
             updateParticles();
         } else {
-            // Game Over logic: Wait for the delay timer to finish before showing the screen
-            if (isGameOverScreenPending) {
+            // Game Over logic: Wait for the delay timer and ensure screen is rendered only once
+            if (isGameOverScreenPending && !isGameOverScreenRendered) {
                 renderGameOver();
+                isGameOverScreenRendered = true; // Mark as rendered
             }
-            // Otherwise, do nothing, allowing explosion animation to play
+            // Otherwise, do nothing, allowing explosion animation or just waiting
         }
     }
 
     private void checkAsteroids() {
-        asteroids.forEach(asteroid -> {
+        // Use iterator to allow safe removal while iterating
+        for (Iterator<Entity> it = asteroids.iterator(); it.hasNext(); ) {
+            Entity asteroid = it.next();
             if (asteroid.getY() > getAppHeight()) {
-                asteroid.getComponent(AsteroidComponent.class).resetPosition();
+                if (!gameOver) {
+                    // If game is running, reset position
+                    asteroid.getComponent(AsteroidComponent.class).resetPosition();
+                } else {
+                    // If game is over, remove the asteroid completely
+                    asteroid.removeFromWorld();
+                    it.remove(); // Remove from the list using iterator
+                }
             }
-        });
+        }
     }
 
     private void moveAsteroids() {
@@ -258,8 +275,27 @@ public class FinalFrontier extends GameApplication {
     }
 
     private void renderGameOver() {
-        // Display "Game Over" message
-        getGameScene().clearGameViews();
-        getGameScene().addUINode(getUIFactoryService().newText("GAME OVER", Color.RED, 32));
+        // Don't clear the whole view, just add UI elements on top
+        // getGameScene().clearGameViews();
+
+        // "GAME OVER" Text
+        var gameOverText = getUIFactoryService().newText("GAME OVER", Color.RED, 32);
+        // Manually position the text near top-center
+        // Estimate text width for centering (adjust as needed)
+        double estimatedTextWidth = 200; // Adjust based on font size and text length
+        gameOverText.setTranslateX((getAppWidth() - estimatedTextWidth) / 2.0);
+        gameOverText.setTranslateY(getAppHeight() / 3.0); // Position 1/3 down
+
+        // "Play Again" Button
+        var playAgainButton = getUIFactoryService().newButton("Play Again");
+        playAgainButton.setOnAction(e -> getGameController().startNewGame());
+
+        // Manually position the button near bottom-center
+        // Estimate button width for centering (adjust as needed)
+        double estimatedButtonWidth = 100;
+        playAgainButton.setTranslateX((getAppWidth() - estimatedButtonWidth) / 2.0);
+        playAgainButton.setTranslateY(getAppHeight() * 0.8); // Position 80% down
+
+        getGameScene().addUINodes(gameOverText, playAgainButton);
     }
 }
