@@ -8,7 +8,6 @@ import com.almasb.fxgl.input.Input;
 // Removed particle imports as they cause compilation errors
 import com.almasb.fxgl.physics.PhysicsWorld;
 import com.almasb.fxgl.texture.Texture; // Added import for Texture
-import javafx.geometry.Point2D; // Import needed
 // Removed unused Interpolator import
 import javafx.scene.image.Image; // Added import
 import javafx.scene.input.KeyCode;
@@ -217,54 +216,6 @@ public class FinalFrontier extends GameApplication {
 
     private void moveAsteroids() {
         asteroids.forEach(asteroid -> asteroid.getComponent(AsteroidComponent.class).move());
-    }
-
-    private void createExplosion(double x, double y) {
-        int particleCount = 50; // Increased number of particles
-        for (int i = 0; i < particleCount; i++) {
-            double angle = random.nextDouble() * 2 * Math.PI;
-            double speed = random.nextDouble() * 3 + 2; // Increased speed
-            double life = random.nextDouble() * 0.8 + 0.7; // Longer life
-            double size = random.nextDouble() * 4 + 2; // Varying sizes
-
-            // Create a more dynamic color palette
-            Color color;
-            if (random.nextDouble() < 0.6) {
-                // Main explosion color (orange-red)
-                color = Color.rgb(
-                        255,
-                        (int) (random.nextDouble() * 100 + 50),
-                        0,
-                        random.nextDouble() * 0.7 + 0.3
-                );
-            } else if (random.nextDouble() < 0.8) {
-                // Yellow-white core
-                color = Color.rgb(
-                        255,
-                        255,
-                        (int) (random.nextDouble() * 100 + 150),
-                        random.nextDouble() * 0.7 + 0.3
-                );
-            } else {
-                // Red outer particles
-                color = Color.rgb(
-                        255,
-                        0,
-                        0,
-                        random.nextDouble() * 0.5 + 0.2
-                );
-            }
-
-            particles.add(new Particle(
-                    x,
-                    y,
-                    Math.cos(angle) * speed,
-                    Math.sin(angle) * speed,
-                    life,
-                    color,
-                    size
-            ));
-        }
     }
 
     private void updateParticles() {
