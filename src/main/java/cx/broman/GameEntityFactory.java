@@ -95,4 +95,31 @@ public class GameEntityFactory implements EntityFactory {
                 .with(new ExpireCleanComponent(duration)) // Remove after animation
                 .build();
     }
+
+    @Spawns("shipExplosionEffect")
+    public Entity newShipExplosion(SpawnData data) {
+        var duration = Duration.seconds(0.5); // Slightly longer duration for ship
+
+        // Create multiple circles for the burst effect - different colors/count
+        var explosionGroup = new Group();
+        int numCircles = 12; // More circles
+        double radius = 2; // Smaller initial radius
+        Color color1 = Color.LIGHTBLUE;
+        Color color2 = Color.WHITE;
+
+        for (int i = 0; i < numCircles; i++) {
+            Circle circle = new Circle(radius, (i % 2 == 0) ? color1 : color2); // Alternate colors
+            // Position circles slightly offset from center initially
+            double angle = 2 * Math.PI * i / numCircles;
+            circle.setTranslateX(Math.cos(angle) * radius * 3); // Slightly wider initial spread
+            circle.setTranslateY(Math.sin(angle) * radius * 3);
+            explosionGroup.getChildren().add(circle);
+        }
+
+        return entityBuilder(data)
+                .view(explosionGroup) // Use the group of circles as the view
+                .with(new ExplosionAnimationComponent(duration)) // Add the animation component
+                .with(new ExpireCleanComponent(duration)) // Remove after animation
+                .build();
+    }
 }

@@ -13,7 +13,7 @@ import javafx.geometry.Point2D; // Import needed
 import javafx.scene.image.Image; // Added import
 import javafx.scene.input.KeyCode;
 import javafx.scene.paint.Color;
-// Removed unused Duration import
+import javafx.util.Duration; // Re-added needed import
 import static com.almasb.fxgl.dsl.FXGL.*; // Added static import for DSL
 
 import java.util.ArrayList;
@@ -28,10 +28,8 @@ public class FinalFrontier extends GameApplication {
     private final Random random = new Random();
     // private int groundY = -200; // Removed unused variable
     private boolean gameOver = false;
-    private long explosionStartTime = 0;
-    private static final long EXPLOSION_DURATION = 1_000_000_000L; // 1 second in nanoseconds
-    private boolean showExplosion = false; // For game over explosion
-    private double explosionX, explosionY; // For game over explosion
+    // Removed explosionStartTime, EXPLOSION_DURATION
+    private boolean isGameOverScreenPending = false; // Flag to delay game over screen
 
 
     public static void main(String[] args) {
@@ -121,18 +119,29 @@ public class FinalFrontier extends GameApplication {
     @Override
     protected void initPhysics() {
         PhysicsWorld physics = getPhysicsWorld();
-        physics.addCollisionHandler(new GameCollisionHandler(EntityType.SHIP, EntityType.ASTEROID) { // Renamed CollisionHandler
+        physics.addCollisionHandler(new GameCollisionHandler(EntityType.SHIP, EntityType.ASTEROID) {
             @Override
             protected void onCollisionBegin(Entity ship, Entity asteroid) {
+                if (gameOver) return; // Prevent multiple triggers if already game over
+
                 gameOver = true;
-                showExplosion = true;
-                explosionStartTime = 0;
-                explosionX = ship.getX() + ship.getWidth() / 2;
-                explosionY = ship.getY() + ship.getHeight() / 2;
-                createExplosion(explosionX, explosionY);
-                // Remove ship and asteroid after collision? Maybe just game over?
-                // ship.removeFromWorld(); // Example if needed
-                // asteroid.removeFromWorld(); // Example if needed
+
+                // Calculate explosion position before removing ship
+                double shipExplosionX = ship.getX() + ship.getWidth() / 2;
+                double shipExplosionY = ship.getY() + ship.getHeight() / 2;
+
+                // Spawn the ship explosion effect
+                spawn("shipExplosionEffect", new SpawnData(shipExplosionX, shipExplosionY));
+
+                // Remove ship and asteroid
+                ship.removeFromWorld();
+                asteroid.removeFromWorld();
+                asteroids.remove(asteroid); // Remove from tracking list too
+
+                // Use runOnce to delay showing the game over screen after the explosion animation
+                runOnce(() -> {
+                    isGameOverScreenPending = true;
+                }, Duration.seconds(0.6)); // Delay slightly longer than ship explosion (0.5s)
             }
         });
 
@@ -170,25 +179,14 @@ public class FinalFrontier extends GameApplication {
             moveAsteroids();
 
 
-            // Update manual particles (if still needed for game over)
+            // Update manual particles (if still needed for game over - currently not used)
             updateParticles();
         } else {
-            // Game Over logic
-            if (showExplosion) {
-                // If this is the first frame of explosion
-                if (explosionStartTime == 0) {
-                    explosionStartTime = System.nanoTime();
-                }
-                // Show explosion for EXPLOSION_DURATION
-                if (System.nanoTime() - explosionStartTime < EXPLOSION_DURATION) {
-                    // Keep rendering the game state with explosion
-                } else {
-                    showExplosion = false;
-                    renderGameOver();
-                }
-            } else {
+            // Game Over logic: Wait for the delay timer to finish before showing the screen
+            if (isGameOverScreenPending) {
                 renderGameOver();
             }
+            // Otherwise, do nothing, allowing explosion animation to play
         }
     }
 
