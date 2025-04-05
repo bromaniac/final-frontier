@@ -13,10 +13,10 @@ This is a work in progress...
 Final Frontier is a 2D arcade-style game built using the FXGL engine. The player controls a spaceship navigating through a field of asteroids. The goal is to survive as long as possible by avoiding collisions. The game utilizes FXGL's features for:
 - Entity-component system
 - Input handling
-- Physics and collision detection
+- Physics and collision detection (ship vs. asteroids)
 - Seamless background scrolling
-- Particle effects for explosions
-- Game state management
+- Explosion animations for ship and asteroid destruction
+- Game over state upon ship destruction
 
 ## Project Structure (FXGL)
 The game leverages the FXGL engine and its entity-component system:
@@ -25,6 +25,7 @@ The game leverages the FXGL engine and its entity-component system:
     - `ShipComponent`: Manages ship movement and shooting actions.
     - `AsteroidComponent`: Controls asteroid movement and reset logic.
     - `BackgroundScrollComponent`: Implements the seamless vertical scrolling of the background texture.
+    - `ExplosionAnimationComponent`: Handles the display of explosion animations.
 - **Factories & Handlers:**
     - `GameEntityFactory`: Defines how to spawn game entities (ship, asteroids, background).
     - `GameCollisionHandler`: Manages collision logic between the ship and asteroids.
@@ -55,8 +56,7 @@ java -jar target/final-frontier-1.0.jar
 ## Game Controls
 - **Left Arrow**: Move ship left
 - **Right Arrow**: Move ship right
-- **Space**: Shoot (TODO)
-- **R**: Restart the game after game over (Note: Restart functionality needs reimplementation within FXGL's structure)
+- **Space**: Shoot
 
 ## Development (FXGL Structure)
 This project uses the FXGL engine and follows a standard Maven project layout. Key game logic is implemented using FXGL's entity-component pattern:
@@ -75,6 +75,7 @@ src/
 │   │           ├── components/               # (Conceptual - components are in broman/)
 │   │           │   ├── AsteroidComponent.java
 │   │           │   ├── BackgroundScrollComponent.java
+│   │           │   ├── ExplosionAnimationComponent.java
 │   │           │   └── ShipComponent.java
 │   │           └── ... (potentially other helper classes)
 │   └── resources/
