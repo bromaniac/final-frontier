@@ -5,11 +5,15 @@ import com.almasb.fxgl.app.GameSettings;
 import com.almasb.fxgl.entity.Entity;
 import com.almasb.fxgl.entity.SpawnData;
 import com.almasb.fxgl.input.Input;
+// Removed particle imports as they cause compilation errors
 import com.almasb.fxgl.physics.PhysicsWorld;
 import com.almasb.fxgl.texture.Texture; // Added import for Texture
+import javafx.geometry.Point2D; // Import needed
+// Removed unused Interpolator import
 import javafx.scene.image.Image; // Added import
 import javafx.scene.input.KeyCode;
 import javafx.scene.paint.Color;
+import javafx.util.Duration; // Import needed
 import static com.almasb.fxgl.dsl.FXGL.*; // Added static import for DSL
 
 import java.util.ArrayList;
@@ -26,8 +30,11 @@ public class FinalFrontier extends GameApplication {
     private boolean gameOver = false;
     private long explosionStartTime = 0;
     private static final long EXPLOSION_DURATION = 1_000_000_000L; // 1 second in nanoseconds
-    private boolean showExplosion = false;
-    private double explosionX, explosionY;
+    private boolean showExplosion = false; // For game over explosion
+    private double explosionX, explosionY; // For game over explosion
+
+    // Removed pending explosion variables
+
 
     public static void main(String[] args) {
         launch(args);
@@ -103,7 +110,10 @@ public class FinalFrontier extends GameApplication {
         int maxAsteroids = 3;
         for (int i = 0; i < maxAsteroids; i++) {
             Image asteroidImage = image("cx/broman/aster" + i + ".gif"); // Corrected path
-            Entity asteroid = spawn("asteroid", new SpawnData(0, 0).put("asteroidImage", asteroidImage));
+            // SpawnData no longer needs initial position (0,0) as resetPosition handles it
+            Entity asteroid = spawn("asteroid", new SpawnData().put("asteroidImage", asteroidImage));
+            // Explicitly call resetPosition for initial placement logic
+            asteroid.getComponent(AsteroidComponent.class).resetPosition();
             asteroids.add(asteroid);
         }
 
@@ -122,6 +132,33 @@ public class FinalFrontier extends GameApplication {
                 explosionX = ship.getX() + ship.getWidth() / 2;
                 explosionY = ship.getY() + ship.getHeight() / 2;
                 createExplosion(explosionX, explosionY);
+                // Remove ship and asteroid after collision? Maybe just game over?
+                // ship.removeFromWorld(); // Example if needed
+                // asteroid.removeFromWorld(); // Example if needed
+            }
+        });
+
+        // Add collision handler for LASER vs ASTEROID using anonymous class
+        physics.addCollisionHandler(new GameCollisionHandler(EntityType.LASER, EntityType.ASTEROID) {
+            @Override
+            protected void onCollisionBegin(Entity laser, Entity asteroid) {
+                // Get asteroid position for explosion center
+                double explosionX = asteroid.getX() + asteroid.getWidth() / 2;
+                double explosionY = asteroid.getY() + asteroid.getHeight() / 2;
+
+                // Remove both entities
+                laser.removeFromWorld();
+                asteroid.removeFromWorld();
+                asteroids.remove(asteroid); // Also remove from the tracking list
+
+                // Removed particle explosion effect due to compilation errors
+
+                // Spawn a new asteroid to replace the destroyed one
+                Image newAsteroidImage = image("cx/broman/aster" + random.nextInt(3) + ".gif"); // Random image
+                Entity newAsteroid = spawn("asteroid", new SpawnData().put("asteroidImage", newAsteroidImage)); // Use default SpawnData
+                // Reset its position using the component's logic (which places it randomly at the top)
+                newAsteroid.getComponent(AsteroidComponent.class).resetPosition();
+                asteroids.add(newAsteroid); // Add the new asteroid to the tracking list
             }
         });
     }
@@ -133,9 +170,12 @@ public class FinalFrontier extends GameApplication {
             checkAsteroids();
             moveAsteroids();
 
-            // Update particles
+            // Removed pending explosion spawning logic from onUpdate
+
+            // Update manual particles (if still needed for game over)
             updateParticles();
         } else {
+            // Game Over logic
             if (showExplosion) {
                 // If this is the first frame of explosion
                 if (explosionStartTime == 0) {

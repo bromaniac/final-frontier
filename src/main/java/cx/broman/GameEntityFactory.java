@@ -12,7 +12,6 @@ import javafx.scene.image.Image;
 import javafx.scene.image.ImageView; // Added import
 import javafx.scene.paint.Color; // Import needed
 import javafx.scene.shape.Circle; // Import needed
-
 import static com.almasb.fxgl.dsl.FXGL.*;
 
 public class GameEntityFactory implements EntityFactory {
@@ -61,8 +60,10 @@ public class GameEntityFactory implements EntityFactory {
                 .viewWithBBox(circle) // Use the circle as the view and bounding box
                 .with(new ProjectileComponent(new Point2D(0, -1), 400)) // Move straight up (0, -1) at speed 400
                 .with(new OffscreenCleanComponent()) // Remove when offscreen
-                // .with(new CollidableComponent(true)) // Uncomment if laser should collide with things
+                .with(new CollidableComponent(true)) // Laser can now collide
                 .build();
     }
-    // --- End of added method ---
+    // --- End of added method --- // Comment still slightly inaccurate
+
+    // Removed asteroidExplosionEffect spawner - will use particle emitter instead
 }
