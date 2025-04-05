@@ -13,7 +13,7 @@ import javafx.geometry.Point2D; // Import needed
 import javafx.scene.image.Image; // Added import
 import javafx.scene.input.KeyCode;
 import javafx.scene.paint.Color;
-import javafx.util.Duration; // Import needed
+// Removed unused Duration import
 import static com.almasb.fxgl.dsl.FXGL.*; // Added static import for DSL
 
 import java.util.ArrayList;
@@ -32,8 +32,6 @@ public class FinalFrontier extends GameApplication {
     private static final long EXPLOSION_DURATION = 1_000_000_000L; // 1 second in nanoseconds
     private boolean showExplosion = false; // For game over explosion
     private double explosionX, explosionY; // For game over explosion
-
-    // Removed pending explosion variables
 
 
     public static void main(String[] args) {
@@ -151,7 +149,8 @@ public class FinalFrontier extends GameApplication {
                 asteroid.removeFromWorld();
                 asteroids.remove(asteroid); // Also remove from the tracking list
 
-                // Removed particle explosion effect due to compilation errors
+                // Spawn the shape-based explosion effect
+                spawn("shapeExplosionEffect", new SpawnData(explosionX, explosionY));
 
                 // Spawn a new asteroid to replace the destroyed one
                 Image newAsteroidImage = image("cx/broman/aster" + random.nextInt(3) + ".gif"); // Random image
@@ -170,7 +169,6 @@ public class FinalFrontier extends GameApplication {
             checkAsteroids();
             moveAsteroids();
 
-            // Removed pending explosion spawning logic from onUpdate
 
             // Update manual particles (if still needed for game over)
             updateParticles();

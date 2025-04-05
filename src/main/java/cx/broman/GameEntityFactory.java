@@ -1,6 +1,7 @@
 package cx.broman;
 
 import com.almasb.fxgl.entity.Entity;
+import com.almasb.fxgl.dsl.components.ExpireCleanComponent; // Import needed
 import com.almasb.fxgl.dsl.components.ProjectileComponent; // Import needed
 import com.almasb.fxgl.entity.EntityFactory;
 import com.almasb.fxgl.entity.SpawnData;
@@ -8,10 +9,12 @@ import com.almasb.fxgl.entity.Spawns;
 import com.almasb.fxgl.entity.components.CollidableComponent;
 import com.almasb.fxgl.dsl.components.OffscreenCleanComponent; // Import needed (Corrected path)
 import javafx.geometry.Point2D; // Import needed
+import javafx.scene.Group; // Import needed
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView; // Added import
 import javafx.scene.paint.Color; // Import needed
 import javafx.scene.shape.Circle; // Import needed
+import javafx.util.Duration; // Import needed
 import static com.almasb.fxgl.dsl.FXGL.*;
 
 public class GameEntityFactory implements EntityFactory {
@@ -66,4 +69,30 @@ public class GameEntityFactory implements EntityFactory {
     // --- End of added method --- // Comment still slightly inaccurate
 
     // Removed asteroidExplosionEffect spawner - will use particle emitter instead
+
+    @Spawns("shapeExplosionEffect")
+    public Entity newShapeExplosion(SpawnData data) {
+        var duration = Duration.seconds(0.3); // Duration of the effect
+
+        // Create multiple circles for the burst effect
+        var explosionGroup = new Group();
+        int numCircles = 8;
+        double radius = 3;
+        Color color = Color.ORANGERED;
+
+        for (int i = 0; i < numCircles; i++) {
+            Circle circle = new Circle(radius, color);
+            // Position circles slightly offset from center initially
+            double angle = 2 * Math.PI * i / numCircles;
+            circle.setTranslateX(Math.cos(angle) * radius * 2);
+            circle.setTranslateY(Math.sin(angle) * radius * 2);
+            explosionGroup.getChildren().add(circle);
+        }
+
+        return entityBuilder(data)
+                .view(explosionGroup) // Use the group of circles as the view
+                .with(new ExplosionAnimationComponent(duration)) // Add the animation component
+                .with(new ExpireCleanComponent(duration)) // Remove after animation
+                .build();
+    }
 }
